@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#0c1320"/>
+<title>INUYASHA — Tōga's Grave | 3D Explorer</title>
+<style>
+ @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+ :root{--bone:#f0dec1;--gold:#d4b789;--ash:#a7b6c6;--ink:#0b1422;--aqua:#a1d6d7}
+ *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b1324;color:#f8eee0;font-family:'Noto Sans KR',sans-serif}
+ #world{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;touch-action:none}
+ .vignette{pointer-events:none;position:fixed;inset:0;z-index:2;background:radial-gradient(ellipse 73% 67% at 50% 42%,transparent 39%,#070d1a75 100%)}
+ .grain{position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.10;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.52' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.23'/%3E%3C/svg%3E")}
+ #hud{pointer-events:none;position:fixed;inset:0;z-index:4;transition:opacity .2s}
+ .hud-brand{position:absolute;top:30px;left:34px;display:flex;gap:13px;align-items:center}
+ .crest{width:44px;height:44px;border:1px solid #d7c4aa91;border-radius:50%;display:grid;place-items:center;font:24px Georgia,serif;color:#f0ddba;background:#101e2b88;box-shadow:0 0 32px #a7c5c624}
+ .eyebrow{font:10px 'DM Mono',monospace;letter-spacing:.24em;color:#bdcbd0;text-transform:uppercase}
+ .hud-title{font-size:16px;letter-spacing:.09em;font-weight:800;margin-top:3px;line-height:1.2}.hud-jp{font-size:10px;color:#d2b89c;letter-spacing:.14em;margin-top:5px}
+ .readout{position:absolute;top:33px;right:33px;text-align:right;font:10px/2.0 'DM Mono',monospace;letter-spacing:.13em;color:#b5bdca;text-shadow:0 1px 12px #101620}
+ .readout b{font-size:12px;font-weight:500;color:#f1e5cf}.readout .fly{color:#a9e9f0}
+ .crosshair{position:absolute;top:50%;left:50%;width:16px;height:16px;transform:translate(-50%,-50%);opacity:.7}
+ .crosshair:before,.crosshair:after{content:'';position:absolute;background:#e5e7deab}.crosshair:before{width:1px;height:16px;left:7px}.crosshair:after{height:1px;width:16px;top:7px}
+ .coord{position:absolute;bottom:28px;left:34px;font:11px/1.95 'DM Mono',monospace;color:#cbd8d8;letter-spacing:.06em}
+ .coord strong{font-size:12px;color:#f4e7d2;letter-spacing:.12em;display:block;font-weight:500}
+ .keys{position:absolute;bottom:29px;right:30px;display:flex;gap:11px;align-items:center;font:10px/1.8 'DM Mono',monospace;text-align:right;color:#b2beca}
+ .key{display:inline-flex;align-items:center;justify-content:center;height:26px;min-width:28px;padding:0 7px;background:#e3ebe310;border:1px solid #e5e5d44f;color:#f2e6d2;border-radius:4px;font:11px 'DM Mono',monospace}
+ .center-info{position:absolute;left:50%;bottom:105px;transform:translateX(-50%);border:1px solid #b3d5ce61;background:#0c1c26d9;border-radius:5px;padding:10px 16px;color:#d1f2ef;font:11px 'DM Mono',monospace;letter-spacing:.05em;display:none;white-space:nowrap}
+ .center-info.visible{display:block}
+ #toast{position:absolute;left:50%;top:18%;transform:translateX(-50%);border:1px solid #a7d0c679;background:#162532ed;border-radius:30px;padding:11px 21px;color:#e9f4e8;font-size:12px;opacity:0;transition:opacity .25s;white-space:nowrap}
+ #toast.show{opacity:1}
+ #fallback{position:fixed;z-index:7;bottom:140px;left:50%;transform:translateX(-50%);display:none;max-width:min(590px,90vw);padding:12px 17px;border-radius:8px;border:1px solid #bdd7db66;color:#e6f6f6;background:#12222bea;line-height:1.8;text-align:center;font-size:11px;pointer-events:none}
+ #fallback.visible{display:block}
+ #intro{position:fixed;z-index:10;inset:0;display:flex;align-items:center;padding:clamp(26px,8vw,145px);background:linear-gradient(90deg,#091321f7 0%,#0b1422e8 32%,#1019279a 61%,#14202d10 100%);transition:opacity .45s,visibility .45s;backdrop-filter:blur(2px)}
+ #intro.hidden{opacity:0;visibility:hidden;pointer-events:none}
+ .intro-content{max-width:580px;width:100%}
+ .intro-over{display:flex;align-items:center;gap:12px;font:10px 'DM Mono',monospace;color:#d4c29f;letter-spacing:.24em;margin-bottom:28px}.intro-over:before{content:'';width:28px;height:1px;background:#b4a989}
+ h1{font-size:clamp(56px,7.5vw,105px);line-height:.99;margin:0;letter-spacing:-.065em;color:#f4eadb;font-weight:800;text-shadow:0 12px 40px #c2bfaa28}
+ .subtitle{font:italic clamp(29px,3.4vw,49px) Georgia,serif;color:#c9b692;margin:9px 0 23px}
+ .intro-lead{font-size:14px;line-height:1.95;color:#b8c6ca;word-break:keep-all;margin:0 0 25px;max-width:500px}
+ .rule{height:1px;background:linear-gradient(90deg,#c6c2a273,transparent);margin-bottom:23px;max-width:490px}
+ .guide{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;max-width:510px;margin-bottom:27px}
+ .guide div{display:flex;align-items:center;gap:8px;font-size:11px;color:#e1e0d8;white-space:nowrap}
+ .begin{padding:16px 28px;background:#e9d8bb;color:#19232d;border:1px solid #fff1cc;font-weight:800;font-size:13px;letter-spacing:.10em;cursor:pointer;border-radius:4px;min-width:245px;box-shadow:0 15px 40px #bea8862b;transition:transform .2s,background .2s}
+ .begin:hover{transform:translateY(-2px);background:#fff1d8}
+ .legal{font-size:10px;line-height:1.85;color:#8ea4b3;margin-top:19px;max-width:520px}
+ #error{position:fixed;z-index:50;bottom:17px;left:16px;right:16px;display:none;padding:17px;background:#361e2de8;border:1px solid #ffb8bb;color:#fff0ec;font-size:13px;line-height:1.7}
+ .locations{position:fixed;left:50%;top:30px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;z-index:5;pointer-events:none}
+ .loc{font:10px 'DM Mono',monospace;color:#dae6df;letter-spacing:.07em;background:#11232a80;border:1px solid #a7baba40;padding:7px 9px;border-radius:3px;white-space:nowrap}
+ @media(max-width:860px){#intro{padding:26px;background:#0c1726d9}.intro-lead{font-size:12px}.guide{grid-template-columns:1fr 1fr;gap:9px}h1{font-size:65px}.hud-brand{left:16px;top:16px}.readout{right:14px;top:16px}.hud-jp{display:none}.coord{bottom:15px;left:16px}.keys{bottom:15px;right:13px}.keys .key{display:none}.locations{top:96px}.loc{font-size:9px;padding:5px}}
+ @media(max-width:540px){.guide{grid-template-columns:1fr}.guide div{font-size:10px}.hud-title{font-size:12px}.readout{font-size:8px}.readout b{font-size:9px}.locations{top:82px}.loc{font-size:8px;padding:4px}.keys{display:none}#intro{overflow-y:auto}}
+</style>
+</head>
+<body>
+<canvas id="world" tabindex="0" aria-label="투아왕의 무덤 3D 탐험 장면"></canvas>
+<div class="vignette"></div><div class="grain"></div>
+<div id="fallback">마우스 고정 없이도 <b>WASD 이동</b>이 가능합니다.<br/>마우스를 누른 채 드래그하면 시점을 돌릴 수 있습니다.</div>
+<div id="hud">
+ <div class="hud-brand"><div class="crest">犬</div><div><div class="eyebrow">The border of the afterlife</div><div class="hud-title">TŌGA'S GRAVE</div><div class="hud-jp">犬の大将の墓 · 사후 세계의 경계</div></div></div>
+ <div class="locations"><div class="loc">1 입구</div><div class="loc">2 두개골</div><div class="loc">3 갈비뼈</div><div class="loc">H 도움말</div></div>
+ <div class="readout">VIEW <b id="view">THIRD PERSON</b><br/>MODE <b class="fly" id="mode">WALKING</b><br/>ALT <b id="altitude">000.0 M</b><br/>TO SKULL <b id="distance">000 M</b></div>
+ <div class="crosshair"></div>
+ <div class="coord"><strong>NO. 02 / THE FORGOTTEN TOMB</strong>안개 너머, 아버지의 흔적을 따라서<div id="coords" style="color:#8faeb4">0 / 0 / 0</div></div>
+ <div class="keys"><div>시점 변경<br/>비행 전환</div><div><span class="key">V</span><br/><span class="key" style="margin-top:5px">SPACE × 2</span></div></div>
+ <div id="interactionHint" class="center-info"></div><div id="toast"></div>
+</div>
+<div id="intro"><div class="intro-content">
+ <div class="intro-over">INUYASHA FAN EXPLORATION · WORLD 002</div>
+ <h1>투아왕의<br/>무덤.</h1><p class="subtitle">Beyond the Black Pearl</p>
+ <p class="intro-lead">저승의 경계에 잠든 거대한 개 요괴의 뼈.<br/>두개골 아래를 지나 갈비뼈 사이로 날아오르고,<br/>공중에 떠 있는 셋쇼마루와 이누야샤를 만나보세요.<br/>당신은 우연히 이곳에 들어온 한 명의 농부입니다.</p>
+ <div class="rule"></div>
+ <div class="guide">
+  <div><span class="key">W A S D</span>이동</div><div><span class="key">MOUSE</span>시점 회전</div>
+  <div><span class="key">SPACE × 2</span>비행 모드</div><div><span class="key">V</span>1인칭 / 3인칭</div>
+  <div><span class="key">SPACE / SHIFT</span>상승 / 하강</div><div><span class="key">R</span>고속 이동</div>
+  <div><span class="key">1 / 2 / 3</span>탐험 지점 이동</div><div><span class="key">E</span>가까이서 관찰</div>
+ </div>
+ <button id="start" class="begin">무덤 탐험 시작하기 ↗</button>
+ <div class="legal">ESC로 마우스 고정을 해제할 수 있습니다. 포인터 잠금이 실패해도 이동은 가능합니다.<br/>《이누야샤》에서 영감을 받은 비공식 팬 제작 3D 콘셉트이며, 원작의 공식 3D 모델을 사용하지 않았습니다.</div>
+</div></div>
+<div id="error" role="alert"></div>
+<script>
+window.__togaReady=false;
+window.__togaError=function(s){let e=document.getElementById('error');e.textContent='3D 화면 오류: '+s+' · 인터넷 연결과 WebGL 지원 여부를 확인해 주세요.';e.style.display='block'};
+window.addEventListener('error',e=>{if(!window.__togaReady)window.__togaError(e.message||'알 수 없는 오류')});
+window.addEventListener('unhandledrejection',e=>window.__togaError(String(e.reason||'라이브러리 로딩 실패')));
+setTimeout(()=>{if(!window.__togaReady)window.__togaError('화면 로딩이 완료되지 않았습니다. Three.js CDN 연결 상태를 확인해 주세요.')},14000);
+</script>
+<script type="module">
+let THREE;
+try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js')}
+catch(e){try{THREE=await import('https://unpkg.com/three@0.168.0/build/three.module.js')}
+catch(e2){window.__togaError('3D 라이브러리를 가져오지 못했습니다');throw e2}}
+const canvas=document.getElementById('world');
+const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x6e8391,.00142);
+const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.1,3200);
+let renderer;
+try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'})}
+catch(e){window.__togaError('WebGL 초기화 실패: '+e.message);throw e}
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.52;renderer.shadowMap.enabled=false;
+const clock=new THREE.Clock();
+const mat=(color,more={})=>new THREE.MeshStandardMaterial({color,roughness:.85,metalness:0,...more});
+const basic=(color,more={})=>new THREE.MeshBasicMaterial({color,...more});
+const bone=mat(0xd7d0b3,{roughness:.94}),boneLight=mat(0xf6ecd5),boneShade=mat(0xb2b39d);
+const inner=mat(0x142329,{roughness:1}),rock=mat(0x526474,{roughness:1,flatShading:true}),armor=mat(0x35424d,{metalness:.62,roughness:.52}),armorEdge=mat(0x8d796a,{metalness:.7,roughness:.37});
+const crimson=mat(0x893a44,{roughness:.76}),ivory=mat(0xf8eee0),cyan=mat(0x9ad9d9,{emissive:0x4ea6c3,emissiveIntensity:.55});
+let seed=37442;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+function mesh(parent,g,m,x=0,y=0,z=0){let o=new THREE.Mesh(g,m);o.position.set(x,y,z);parent.add(o);return o}
+function orb(p,r,m,x=0,y=0,z=0){return mesh(p,new THREE.SphereGeometry(r,18,13),m,x,y,z)}
+function box(p,xs,ys,zs,m,x=0,y=0,z=0){return mesh(p,new THREE.BoxGeometry(xs,ys,zs),m,x,y,z)}
+function cone(p,r,h,m,x=0,y=0,z=0,segments=9){return mesh(p,new THREE.ConeGeometry(r,h,segments),m,x,y,z)}
+function link(p,a,b,r,m){let v=new THREE.Vector3(...a),w=new THREE.Vector3(...b),d=w.clone().sub(v);let o=mesh(p,new THREE.CylinderGeometry(r*.78,r,d.length(),9),m,...v.clone().add(w).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return o}
+function tube(p,points,r,m,segments=24){return mesh(p,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(v=>new THREE.Vector3(...v))),segments,r,8,false),m)}
+function labelSprite(text,sub,color='#f1e4cd'){
+ let c=document.createElement('canvas');c.width=384;c.height=112;let x=c.getContext('2d');x.clearRect(0,0,384,112);
+ x.textAlign='center';x.fillStyle=color;x.font='bold 31px sans-serif';x.shadowColor='#000e';x.shadowBlur=11;x.fillText(text,192,45);
+ x.shadowBlur=0;x.fillStyle='#e4ded5b8';x.font='15px monospace';x.fillText(sub,192,79);
+ let s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,depthTest:false}));s.scale.set(25,7.3,1);return s;
+}
+// Border-of-the-afterlife sky, moon, fog and world lighting.
+const sky=mesh(scene,new THREE.SphereGeometry(1650,40,22),new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,fog:false,vertexShader:`varying vec3 d;void main(){d=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,fragmentShader:`varying vec3 d;void main(){float h=clamp(d.y,-.23,1.);vec3 low=vec3(.45,.54,.60);vec3 mid=vec3(.14,.25,.38);vec3 high=vec3(.025,.043,.12);vec3 v=mix(low,mid,smoothstep(-.14,.35,h));v=mix(v,high,smoothstep(.3,.93,h));v+=vec3(.18,.16,.20)*pow(max(0.,1.-length(vec2(d.x+.20,d.y-.26))*2.0),3.);gl_FragColor=vec4(v,1.);}`}));sky.renderOrder=-10;
+const moon=orb(scene,83,basic(0xc9e2d8,{fog:false}),245,240,-1040);
+orb(scene,107,basic(0xcee9dc,{transparent:true,opacity:.065,depthWrite:false,blending:THREE.AdditiveBlending,fog:false}),245,240,-1043);
+const stars=[];for(let i=0;i<1100;i++){let a=random()*Math.PI*2,b=random()*Math.PI*1.3,r=1050+random()*400;stars.push(Math.cos(a)*Math.sin(b)*r,Math.cos(b)*r,Math.sin(a)*Math.sin(b)*r)}
+const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(stars,3));scene.add(new THREE.Points(sg,new THREE.PointsMaterial({size:2.0,sizeAttenuation:false,color:0xfff1df,opacity:.58,transparent:true,fog:false,depthWrite:false})));
+scene.add(new THREE.HemisphereLight(0xd8e1f0,0x31454a,2.7));const sun=new THREE.DirectionalLight(0xe5dbcb,2.7);sun.position.set(-160,260,180);scene.add(sun);const rim=new THREE.DirectionalLight(0x8cc9dd,1.18);rim.position.set(180,90,-250);scene.add(rim);
+
+// Terrain slopes beneath, but never places a chasm under the explorer.
+function groundY(x,z){return -3.5+2.0*Math.sin(x*.009)*Math.cos(z*.015)+1.6*Math.cos(z*.026+x*.01)+.54*Math.sin(x*.059+z*.033)}
+const land=new THREE.PlaneGeometry(2500,2500,180,180);land.rotateX(-Math.PI/2);const pa=land.attributes.position,colors=[],co=new THREE.Color();
+for(let i=0;i<pa.count;i++){let x=pa.getX(i),z=pa.getZ(i),y=groundY(x,z);pa.setY(i,y);let n=.5+.5*Math.sin(x*.012+z*.021);co.setRGB(.23+n*.11,.31+n*.12,.35+n*.13);colors.push(co.r,co.g,co.b)}
+land.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));land.computeVertexNormals();mesh(scene,land,mat(0xffffff,{vertexColors:true,roughness:1}));
+// Ring of distant shattered cliffs and eerie stone spikes.
+const mg=new THREE.BufferGeometry(),vs=[],ix=[];
+for(let i=0;i<=120;i++){let a=i/120*Math.PI*2,d=850+Math.sin(a*9)*90,px=Math.sin(a)*d,pz=Math.cos(a)*d,ht=75+200*Math.pow(Math.abs(Math.sin(a*15.6+1.7)),2)+random()*75;vs.push(px,-35,pz,px,ht,pz);if(i<120){let b=i*2;ix.push(b,b+1,b+3,b,b+3,b+2)}}
+mg.setAttribute('position',new THREE.Float32BufferAttribute(vs,3));mg.setIndex(ix);mg.computeVertexNormals();mesh(scene,mg,mat(0x394b5d,{roughness:1,flatShading:true}));
+const stoneGeom=new THREE.IcosahedronGeometry(1,0),stoneBatch=new THREE.InstancedMesh(stoneGeom,rock,970),o3=new THREE.Object3D();
+for(let i=0;i<stoneBatch.count;i++){let x=(random()-.5)*1650,z=(random()-.5)*1650;if(Math.abs(x)<38&&z<170&&z>-450)x+=x<0?-65:65;let sc=.8+Math.pow(random(),3)*13;o3.position.set(x,groundY(x,z)+sc*.4,z);o3.scale.set(sc*(.7+random()),sc*(.6+random()*2),sc*(.7+random()));o3.rotation.set(random()*2,random()*6.28,random()*.3);o3.updateMatrix();stoneBatch.setMatrixAt(i,o3.matrix)}stoneBatch.instanceMatrix.needsUpdate=true;scene.add(stoneBatch);
+for(let j=0;j<65;j++){let x=(random()-.5)*700,z=120-random()*1000;let h=15+random()*75;let ob=cone(scene,2.5+random()*6,h,rock,x,groundY(x,z)+h/2,z,5);ob.rotation.z=(random()-.5)*.45}
+// Near ground: ancient path and stone torii fragments into the void.
+const pathMat=mat(0x6f8081,{roughness:1}),etch=mat(0xa6b1aa,{roughness:1});
+for(let z=145;z>-195;z-=10.5){let wob=Math.sin(z*.06)*2;const slab=box(scene,12+random()*6,.5,7.1,pathMat,wob,groundY(wob,z)+.38,z);slab.rotation.y=(random()-.5)*.16;slab.rotation.z=(random()-.5)*.08}
+for(let z of [108,22,-78,-162]){for(let s of [-1,1]){let x=s*23;let h=8+random()*9;let ob=box(scene,3.8,h,3.8,rock,x,groundY(x,z)+h/2,z);ob.rotation.z=s*.06;box(scene,5,.8,5,etch,x,groundY(x,z)+h+.35,z)}}
+// Luminous particles + soft transparent mist banks.
+const wisps=[];for(let i=0;i<190;i++){let a=(random()-.5)*600,z=(random()-.5)*800-180,y=3+random()*105;let p=orb(scene,.22+random()*.4,basic(i%5===0?0xf0dbad:0xb4d8d8,{transparent:true,opacity:.34+random()*.3,depthWrite:false}),a,y,z);p.userData.baseY=y;p.userData.phase=random()*7;p.userData.speed=.2+random()*.5;wisps.push(p)}
+function mistCloud(x,y,z,w,d,op){let g=new THREE.Group();g.position.set(x,y,z);scene.add(g);for(let i=0;i<6;i++){const s=mesh(g,new THREE.PlaneGeometry(w*(.6+random()*.7),d*(.7+random()*.5)),basic(0xbbd0d0,{transparent:true,opacity:op,depthWrite:false,side:THREE.DoubleSide}), (random()-.5)*w*.65,(random()-.5)*2,(random()-.5)*d*.5);s.rotation.x=-Math.PI/2}return g}
+const clouds=[];for(let i=0;i<18;i++)clouds.push(mistCloud((random()-.5)*750,3+random()*40,-140-random()*650,100+random()*250,50+random()*160,.035+random()*.04));
+
+// The colossal dog-demon skeleton. Front of skull faces positive Z, rib cage trails to negative Z.
+const tomb=new THREE.Group();scene.add(tomb);
+// Rib cage: giant vaults that can be passed through by flying.
+for(let i=0;i<17;i++){
+ const z=-326-i*16.1;const factor=Math.sin(Math.PI*(i+2)/21);const reach=33+factor*37;const upper=80+factor*18;
+ const vertebra=orb(tomb,6.3,boneShade,0,upper,z);vertebra.scale.set(1,1.1,1.8);
+ for(let s of [-1,1]){
+  tube(tomb,[[s*1,upper,z],[s*reach*.66,upper+10,z+2],[s*reach,upper-6,z+5],[s*reach*1.03,51-factor*6,z+9],[s*reach*.68,22-factor*4,z+17]],3.4+(i<6?1.0:0),i%4===0?boneLight:bone,26);
+  const tip=cone(tomb,2.4,8,boneLight,s*reach*.68,19-factor*5,z+17,7);tip.rotation.z=-s*.25;
+ }
+ if(i%2===0){const spineTip=cone(tomb,5.5,23,boneShade,0,upper+12,z,7);spineTip.rotation.x=-.1}
+}
+// Spinal column bends into vertebrae and tail.
+let spinePts=[];for(let i=0;i<=27;i++){let z=-293-i*17,y=95-Math.max(0,i-13)*1.8;spinePts.push([0,y,z]);if(i>14&&i%2===0){let v=orb(tomb,5,bone,0,y,z);v.scale.set(1,1.0,1.6)}}
+tube(tomb,spinePts,6.4,boneShade,104);
+for(let i=0;i<12;i++){let z=-755-i*17;const part=orb(tomb,4.8-i*.23,boneShade,Math.sin(i*.2)*5,64-i*1.6,z);part.scale.z=1.5}
+// Enormous shoulder guards, spines, and chipped iron-brown chestplate.
+for(let s of [-1,1]){
+ let pauldron=orb(tomb,24,armor,s*54,85,-301);pauldron.scale.set(1.34,.88,1.27);pauldron.rotation.z=s*.12;
+ let outline=orb(tomb,24,armorEdge,s*54,85,-303);outline.scale.set(1.38,.16,1.28);outline.rotation.z=s*.2;
+ for(let i=0;i<6;i++){let x=s*(40+i*7),z=-307+(i%2?15:-13),h=19+random()*28;let spike=cone(tomb,5.2,h,armor,x,107+h/2-9,z,6);spike.rotation.z=s*(.08+i*.12)}
+ link(tomb,[s*54,82,-300],[s*33,36,-272],6,armorEdge);
+ for(let j=0;j<4;j++){let rivet=orb(tomb,1.8,etch,s*(37+j*12),99,-276+j*.7);rivet.scale.set(1.4,.6,1.2)}
+}
+const chest=box(tomb,76,28,18,armor,0,61,-290);chest.rotation.x=-.26;const chestCenter=box(tomb,54,25,2.5,crimson,0,59,-277);chestCenter.rotation.x=-.22;
+for(let k=0;k<7;k++){box(tomb,6,18,2.2,armorEdge,(k-3)*8.2,56,-274).rotation.x=-.22}
+for(let s of [-1,1]){for(let k=0;k<5;k++){orb(tomb,2.4,armorEdge,s*(22+k*8),76,-279)}}
+// Skull: large cranium, cheekbones, yawning jaws and canine teeth.
+const skull=new THREE.Group();skull.position.set(0,0,0);tomb.add(skull);
+let cranium=orb(skull,35,bone,0,96,-259);cranium.scale.set(1.18,.96,1.15);
+let face=orb(skull,25,boneLight,0,74,-215);face.scale.set(1.18,.70,1.96);
+let noseBridge=orb(skull,13,bone,0,82,-187);noseBridge.scale.set(1.36,.45,2.3);
+let snout=orb(skull,18,boneLight,0,67,-160);snout.scale.set(1.24,.65,1.35);
+let mouth=orb(skull,18,inner,0,54,-167);mouth.scale.set(1.2,.55,1.45);
+let jaw=orb(skull,19,boneShade,0,40,-171);jaw.scale.set(1.25,.23,1.9);
+// black hollow eye sockets, angled to be visible when approaching.
+for(let s of [-1,1]){
+ let socket=orb(skull,12,inner,s*19,98,-230);socket.scale.set(.95,1.20,.30);socket.rotation.z=-s*.2;
+ let ridge=orb(skull,13,boneShade,s*21,109,-235);ridge.scale.set(1.1,.30,.85);ridge.rotation.z=s*.18;
+ let cheek=orb(skull,14,bone,s*28,76,-228);cheek.scale.set(.8,.7,1.6);
+ let nostril=orb(skull,4,inner,s*8.0,70,-140);nostril.scale.set(1,.65,.48);
+ // Upper fangs protrude downward into mouth. Lower fangs point up.
+ for(let k=0;k<7;k++){
+  let z=-145-k*6.5;let x=s*(11+Math.sin(k*.65)*5.5);
+  let tooth=cone(skull,k<2?4.2:2.6,k<2?22:11,boneLight,x,k<2?54:51,z,7);tooth.rotation.z=Math.PI+(s*.09);
+ }
+ for(let k=0;k<4;k++){let t=cone(skull,2.4,9,boneLight,s*(13+k*2.0),44,-158-k*9,6);t.rotation.z=s*.08}
+ // Long swept ear / horn-shaped bones.
+ let ear=cone(skull,15,49,bone,s*40,131,-270,8);ear.rotation.z=-s*.35;ear.rotation.x=-.20;
+ let earInner=cone(skull,6,36,boneShade,s*45,139,-266,7);earInner.rotation.z=-s*.35;
+ for(let k=0;k<3;k++)link(skull,[s*(25+k*4),118,-258-k*12],[s*(39+k*5),99,-250-k*11],2.3,boneShade);
+}
+let tip=orb(skull,13,inner,0,64,-139);tip.scale.set(1.1,.5,.36);
+for(let k=0;k<6;k++){let plate=box(skull,9,3.2,7,boneShade,(k-2.5)*8,105,-244);plate.rotation.z=(k-2.5)*.07}
+// Entrance marker below the giant skull.
+const runeMat=mat(0x81c5cc,{emissive:0x74c0cf,emissiveIntensity:.55});
+for(let s of [-1,1]){let c=cone(scene,3,18,boneShade,s*19,groundY(s*19,-120)+10,-120,6);c.rotation.z=s*.22}
+const treasure=new THREE.Group();treasure.position.set(0,groundY(0,-348)+.5,-348);scene.add(treasure);
+const plinth=box(treasure,13,3.7,14,rock,0,2,0),anvil=box(treasure,10,.5,9,armorEdge,0,4,0);
+// Legendary sword remains as an unreachable display prop, not an item to take.
+const sword=new THREE.Group();sword.position.set(0,6,0);treasure.add(sword);let blade=mesh(sword,new THREE.ConeGeometry(3,19,4),boneLight,0,14,0);blade.rotation.z=Math.PI;box(sword,9,1.3,1.1,armorEdge,0,4.9,0);link(sword,[0,4.7,0],[0,-.5,0],1.2,armor);orb(sword,1.6,cyan,0,-1,0);
+const swordLight=new THREE.PointLight(0xb9decc,45,90,1.1);swordLight.position.set(0,21,-348);scene.add(swordLight);
+const treasureLabel=labelSprite('봉인된 철쇄아','TESSAIGA · SACRED SWORD','#f9e7b5');treasureLabel.position.set(0,30,0);treasure.add(treasureLabel);
+
+// Tiny yet recognizable stylized character figures, floating beside their father's remains.
+const shirtWhite=mat(0xf6eee6),hairWhite=mat(0xdce7e3,{emissive:0x586f80,emissiveIntensity:.18}),skin=mat(0xf0d6c1),red=mat(0xae3337),redDark=mat(0x712b31),black=mat(0x303341),yellow=mat(0xd8b476),violet=mat(0x564368),fur=mat(0xeae6dc);
+function sleeve(parent,s,material,y=1.9){let a=mesh(parent,new THREE.CylinderGeometry(.58,.83,1.35,7),material,s*1.15,y-.42,0);a.rotation.z=s*.31;return a}
+function figureCore(parent,isSess){
+ const robe=isSess?shirtWhite:red;
+ const body=mesh(parent,new THREE.CylinderGeometry(.82,1.21,2.65,10),robe,0,1.8,0);body.rotation.y=Math.PI/10;
+ box(parent,1.75,.40,.15,isSess?violet:redDark,0,1.20,.96);
+ const neck=mesh(parent,new THREE.CylinderGeometry(.30,.32,.47,10),skin,0,3.35,0);
+ const head=orb(parent,.66,skin,0,3.95,0);head.scale.set(.90,1.17,.84);
+ for(let s of [-1,1]){
+  const eye=orb(parent,.093,black,s*.23,4.01,.56);eye.scale.set(.7,.46,.25);
+  sleeve(parent,s,robe,2.55);
+  let hand=orb(parent,.21,skin,s*1.42,1.28,.13);
+  let leg=mesh(parent,new THREE.CylinderGeometry(.38,.30,1.18,8),robe,s*.43,-.08,0);
+  let boot=box(parent,.64,.35,1.00,isSess?black:redDark,s*.43,-.76,.18);
+ }
+ // Long flowing white/silver hair, separate front locks.
+ for(let i=0;i<11;i++){let a=i/10*Math.PI*1.18+Math.PI*.90;let x=Math.cos(a)*.6,z=Math.sin(a)*.35-.24;let h=2.5+(i%3)*.3;
+  let strand=mesh(parent,new THREE.CylinderGeometry(.12,.27,h,6),hairWhite,x,3.0-(h-2.5)*.3,z);strand.rotation.z=(x)*.22;
+ }
+ let fringe=orb(parent,.63,hairWhite,0,4.46,-.16);fringe.scale.set(1,.36,.92);
+ for(let s of [-1,1]){let front=mesh(parent,new THREE.ConeGeometry(.20,1.8,6),hairWhite,s*.56,3.6,.40);front.rotation.z=-s*.12}
+ if(isSess){
+  // crescent on forehead, cheek markings, white fur draped over shoulder, armored chest.
+  const moon=mesh(parent,new THREE.TorusGeometry(.15,.035,7,20),mat(0x72528b),0,4.32,.57);moon.rotation.z=-.2;
+  for(let s of [-1,1]){let mark=box(parent,.26,.045,.018,red,s*.44,3.88,.55);mark.rotation.z=s*.3;let mark2=box(parent,.2,.045,.018,red,s*.45,3.75,.52);mark2.rotation.z=s*.2}
+  let guard=box(parent,1.87,.65,.48,armorEdge,0,2.60,.48);guard.rotation.z=.02;
+  box(parent,.95,.43,.50,yellow,0,1.12,.7);
+  // sweeping furry pelt that cascades from the right shoulder.
+  for(let i=0;i<9;i++){let y=2.8-i*.38,x=-1.24-Math.sin(i*.52)*.40;let tuft=orb(parent,.56,fur,x,y,-.16);tuft.scale.set(1.05,1.25,.9)}
+  let scabbard=link(parent,[1.28,2.0,-.40],[2.1,-.6,-.38],.12,black);scabbard.material=armorEdge;
+ }else{
+  // InuYasha's dog ears and traditional red robes.
+  for(let s of [-1,1]){let ear=cone(parent,.24,.65,hairWhite,s*.46,4.85,-.16,5);ear.rotation.z=-s*.34;
+   let innerEar=cone(parent,.10,.40,mat(0xc2a4aa),s*.48,4.91,.02,5);innerEar.rotation.z=-s*.34}
+  box(parent,1.82,.14,.14,redDark,0,1.22,.96);
+  const sash=box(parent,2.1,.38,.35,redDark,0,1.04,.7);
+  // distinctive huge red haori sleeves and sword silhouette.
+  box(parent,.98,1.1,.90,red,1.25,1.75,-.15).rotation.z=.32;
+  link(parent,[1.86,1.2,-.22],[2.3,-1.2,-.4],.18,armorEdge);
+ }
+ return body;
+}
+const figures=[];
+function floatingCharacter(name,caption,x,y,z,isSess){const g=new THREE.Group();g.position.set(x,y,z);scene.add(g);const model=new THREE.Group();model.scale.setScalar(3.7);model.rotation.y=0;g.add(model);figureCore(model,isSess);
+ const halo=mesh(g,new THREE.TorusGeometry(7,.095,6,64),basic(isSess?0xdbefd8:0xf3b8ac,{transparent:true,opacity:.55}),0,-4.5,0);halo.rotation.x=Math.PI/2;
+ const l=new THREE.PointLight(isSess?0xb9d6ed:0xf6ae95,32,75,1.5);l.position.set(0,2,0);g.add(l);
+ const label=labelSprite(name,caption,isSess?'#f5f2df':'#ffb4a2');label.position.set(0,21,0);g.add(label);
+ figures.push({group:g,baseY:y,phase:isSess?0:2.2,halo});return g;}
+const sesshomaru=floatingCharacter('셋쇼마루','SESSHŌMARU',-69,54,-163,true);
+const inuyasha=floatingCharacter('이누야샤','INUYASHA',68,43,-153,false);
+
+// Ordinary traveler: wandering farmer with straw hat, linen vest, basket and sandals.
+const farmer=new THREE.Group();scene.add(farmer);
+const avatar=new THREE.Group();farmer.add(avatar);
+const linen=mat(0xb49e7e),linenShade=mat(0x726c56),indigo=mat(0x4d6167),straw=mat(0xc8a05d),strawDark=mat(0x876f4b),skinFarmer=mat(0xd3ae8b);
+const legs=[],arms=[];
+const torso=mesh(avatar,new THREE.CylinderGeometry(.44,.60,1.15,10),linen,0,1.55,0);torso.rotation.y=.05;
+box(avatar,1.07,.17,.15,strawDark,0,1.14,.50);
+const chestPatch=box(avatar,.35,.34,.05,linenShade,.30,1.58,.52);chestPatch.rotation.z=.08;
+orb(avatar,.44,skinFarmer,0,2.42,0);
+// flat straw kasa / rice farmer hat, visible silhouette from above and behind.
+let brim=mesh(avatar,new THREE.CylinderGeometry(1.03,1.03,.075,24),straw,0,2.79,0);
+let hat=cone(avatar,.92,.55,straw,0,3.09,0,24);let band=mesh(avatar,new THREE.CylinderGeometry(.54,.54,.055,24),strawDark,0,2.87,0);
+for(let i=0;i<24;i++){let a=i*Math.PI/12;let st=link(avatar,[0,3.34,0],[Math.cos(a)*.91,2.81,Math.sin(a)*.91],.012,strawDark)}
+for(let s of [-1,1]){
+ let arm=new THREE.Group();arm.position.set(s*.63,1.87,0);avatar.add(arm);
+ mesh(arm,new THREE.CylinderGeometry(.18,.15,.89,8),linen,0,-.41,0);orb(arm,.14,skinFarmer,0,-.91,0);arms.push({g:arm,s});
+ let leg=new THREE.Group();leg.position.set(s*.25,1.05,0);avatar.add(leg);
+ mesh(leg,new THREE.CylinderGeometry(.24,.19,.75,8),indigo,0,-.38,0);box(leg,.4,.17,.76,strawDark,0,-.80,.12);legs.push({g:leg,s});
+}
+// Woven harvest basket, carried on back (third-person camera sees this).
+const basket=mesh(avatar,new THREE.CylinderGeometry(.44,.33,.88,12),strawDark,0,1.62,.63);basket.rotation.x=.12;
+const basketRim=mesh(avatar,new THREE.TorusGeometry(.43,.075,7,16),straw,0,2.06,.62);basketRim.rotation.x=Math.PI/2;
+for(let i=0;i<5;i++)box(avatar,.78,.05,.06,straw,0,1.31+i*.13,.99);
+// Field hoe over the left shoulder.
+link(avatar,[-.76,1.1,.45],[-.92,3.05,.57],.043,strawDark);
+const hoe=box(avatar,.72,.10,.23,armorEdge,-.83,3.14,.57);hoe.rotation.z=-.24;
+
+// Interactive objects and viewpoints.
+const hotspots=[{label:'투아왕의 머리뼈',pos:new THREE.Vector3(0,68,-158),radius:80,message:'투아왕 · 거대한 개 요괴의 유골이 무덤이 되었습니다.'},
+ {label:'셋쇼마루',pos:sesshomaru.position,radius:42,message:'셋쇼마루 · 아버지의 유산을 찾는 장남.'},
+ {label:'이누야샤',pos:inuyasha.position,radius:42,message:'이누야샤 · 반요인 차남, 붉은 화복을 입은 모습.'},
+ {label:'철쇄아',pos:new THREE.Vector3(0,14,-348),radius:48,message:'철쇄아 · 투아왕이 남긴 검이 잠들어 있습니다.'}];
+const waypoints=[{title:'입구',x:0,z:148,y:null},{title:'두개골',x:0,z:-130,y:20},{title:'갈비뼈',x:0,z:-390,y:45}];
+
+// Input and camera: no movement dependency on pointer lock.
+const state={started:false,viewLocked:false,dragging:false,yaw:0,pitch:.075,fly:false,firstPerson:false,keys:{},velocity:new THREE.Vector3(),vertical:0,grounded:true,lastSpace:-1000,lastSpaceUp:-1000,moving:false};
+farmer.position.set(0,groundY(0,148),148);
+const intro=document.getElementById('intro'),notice=document.getElementById('fallback'),start=document.getElementById('start');
+let toastTimeout;
+function toast(t){let e=document.getElementById('toast');e.textContent=t;e.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>e.classList.remove('show'),2200)}
+function showNotice(){notice.classList.toggle('visible',state.started&&!state.viewLocked)}
+function pointer(){if(!state.started||document.pointerLockElement===canvas||!canvas.requestPointerLock)return;try{let r=canvas.requestPointerLock();if(r?.catch)r.catch(showNotice)}catch(e){showNotice()}}
+start.addEventListener('click',()=>{state.started=true;intro.classList.add('hidden');canvas.focus({preventScroll:true});showNotice();pointer()});
+canvas.addEventListener('mousedown',e=>{if(state.started&&e.button===0&&!state.viewLocked){state.dragging=true;canvas.focus({preventScroll:true})}});
+document.addEventListener('mouseup',()=>state.dragging=false);
+canvas.addEventListener('click',()=>{if(state.started&&!state.viewLocked)pointer()});
+document.addEventListener('pointerlockchange',()=>{state.viewLocked=document.pointerLockElement===canvas;state.dragging=false;if(!state.viewLocked)state.keys={};showNotice()});
+document.addEventListener('pointerlockerror',showNotice);
+document.addEventListener('mousemove',e=>{if(!state.started||(!state.viewLocked&&!state.dragging))return;state.yaw-=e.movementX*.0022;state.pitch=THREE.MathUtils.clamp(state.pitch-e.movementY*.0019,-1.36,1.37)});
+function fly(v){state.fly=v;state.vertical=0;if(v)farmer.position.y=Math.max(farmer.position.y+2,groundY(farmer.position.x,farmer.position.z)+3);toast(v?'비행 활성화 · SPACE 상승 / SHIFT 하강':'걷기 모드 활성화')}
+const codes=new Set(['KeyW','KeyA','KeyS','KeyD','Space','ShiftLeft','ShiftRight','KeyR','KeyV','KeyF','KeyE','KeyH','Digit1','Digit2','Digit3','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']);
+document.addEventListener('keydown',e=>{
+ if(!state.started||e.altKey||e.metaKey||e.ctrlKey||!codes.has(e.code))return;
+ e.preventDefault();
+ if(e.code==='Space'&&!e.repeat){let now=performance.now();const twice=now-state.lastSpaceUp<400&&state.lastSpaceUp>=state.lastSpace&&state.lastSpace>0;if(twice){fly(!state.fly);state.lastSpace=-1000;state.lastSpaceUp=-1000;state.keys.Space=false}else{state.lastSpace=now;state.keys.Space=true;if(!state.fly&&state.grounded){state.vertical=10.2;state.grounded=false}}}
+ else state.keys[e.code]=true;
+ if(e.repeat)return;
+ if(e.code==='KeyV'){state.firstPerson=!state.firstPerson;avatar.visible=!state.firstPerson;toast(state.firstPerson?'1인칭 시점':'3인칭 시점')}
+ if(e.code==='KeyF')fly(!state.fly);
+ if(e.code==='KeyH')toast('WASD 이동 · 더블 SPACE 비행 · V 시점 · 1/2/3 순간 이동');
+ if(e.code==='KeyE'){let near=nearestHotspot();toast(near?near.message:'가까이 다가가면 유적을 관찰할 수 있습니다')}
+ if(['Digit1','Digit2','Digit3'].includes(e.code)){const p=waypoints[Number(e.code[5])-1];farmer.position.set(p.x,p.y??groundY(p.x,p.z),p.z);state.velocity.set(0,0,0);state.vertical=0;state.fly=Number(e.code[5])!==1;state.grounded=!state.fly;state.yaw=0;state.pitch=.05;toast(p.title+' 탐험 지점으로 이동')}
+});
+document.addEventListener('keyup',e=>{if(!state.started)return;if(codes.has(e.code)&&!e.metaKey&&!e.altKey&&!e.ctrlKey)e.preventDefault();if(e.code==='Space')state.lastSpaceUp=performance.now();state.keys[e.code]=false});
+window.addEventListener('blur',()=>{state.keys={};state.dragging=false});document.addEventListener('visibilitychange',()=>{if(document.hidden)state.keys={}});
+canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();window.__togaError('WebGL 그래픽 연결이 끊어졌습니다')});
+function nearestHotspot(){let n=null,d=Infinity;for(const h of hotspots){let dd=farmer.position.distanceTo(h.pos);if(dd<h.radius&&dd<d){n=h;d=dd}}return n}
+const forward=new THREE.Vector3(),right=new THREE.Vector3(),movement=new THREE.Vector3(),view=new THREE.Vector3(),target=new THREE.Vector3(),ideal=new THREE.Vector3();
+let passed=0;
+function update(delta,time){
+ const dt=Math.min(delta,.05);passed+=dt;
+ for(const w of wisps)w.position.y=w.userData.baseY+Math.sin(time*w.userData.speed+w.userData.phase)*1.2;
+ for(const f of figures){f.group.position.y=f.baseY+Math.sin(time*.75+f.phase)*1.9;f.halo.rotation.z+=dt*.09}
+ moon.rotation.y+=dt*.004;sky.rotation.y+=dt*.001;
+ sword.rotation.z=Math.sin(time*.5)*.05;
+ const k=state.keys;forward.set(Math.sin(state.yaw),0,-Math.cos(state.yaw));right.set(Math.cos(state.yaw),0,Math.sin(state.yaw));movement.set(0,0,0);
+ if(k.KeyW||k.ArrowUp)movement.add(forward);if(k.KeyS||k.ArrowDown)movement.sub(forward);if(k.KeyD||k.ArrowRight)movement.add(right);if(k.KeyA||k.ArrowLeft)movement.sub(right);
+ if(movement.lengthSq()>0)movement.normalize();state.moving=movement.lengthSq()>0;
+ const boost=k.KeyR||(!state.fly&&(k.ShiftLeft||k.ShiftRight)),speed=(state.fly?29:15)*(boost?2.55:1),alpha=1-Math.exp(-dt*(state.fly?6:10));
+ state.velocity.x=THREE.MathUtils.lerp(state.velocity.x,movement.x*speed,alpha);state.velocity.z=THREE.MathUtils.lerp(state.velocity.z,movement.z*speed,alpha);
+ farmer.position.x+=state.velocity.x*dt;farmer.position.z+=state.velocity.z*dt;
+ farmer.position.x=THREE.MathUtils.clamp(farmer.position.x,-1000,1000);farmer.position.z=THREE.MathUtils.clamp(farmer.position.z,-1000,1000);
+ const floor=groundY(farmer.position.x,farmer.position.z);
+ if(state.fly){let dy=(k.Space?1:0)-((k.ShiftLeft||k.ShiftRight)?1:0);state.vertical=THREE.MathUtils.lerp(state.vertical,dy*speed,alpha);farmer.position.y+=state.vertical*dt;farmer.position.y=THREE.MathUtils.clamp(farmer.position.y,floor+.2,450);state.grounded=false}
+ else{state.vertical-=24*dt;farmer.position.y+=state.vertical*dt;if(farmer.position.y<=floor){farmer.position.y=floor;state.vertical=0;state.grounded=true}}
+ avatar.rotation.y=THREE.MathUtils.lerp(avatar.rotation.y,state.yaw+Math.PI,1-Math.exp(-dt*10));avatar.rotation.x=THREE.MathUtils.lerp(avatar.rotation.x,state.fly?-.13:0,dt*5);
+ if(state.moving&&!state.fly){avatar.position.y=Math.abs(Math.sin(passed*speed*.66))*.065;for(const a of arms)a.g.rotation.x=Math.sin(passed*speed*.66)*.36*a.s;for(const l of legs)l.g.rotation.x=-Math.sin(passed*speed*.66)*.38*l.s}
+ else{avatar.position.y=0;for(const a of arms)a.g.rotation.x=THREE.MathUtils.lerp(a.g.rotation.x,0,dt*7);for(const l of legs)l.g.rotation.x=THREE.MathUtils.lerp(l.g.rotation.x,0,dt*7)}
+ view.set(Math.sin(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),-Math.cos(state.yaw)*Math.cos(state.pitch));
+ target.set(farmer.position.x,farmer.position.y+2.1,farmer.position.z);
+ if(state.firstPerson){ideal.copy(target).add(new THREE.Vector3(0,.34,0));camera.position.lerp(ideal,1-Math.exp(-dt*17));camera.lookAt(ideal.clone().add(view))}
+ else{ideal.copy(target).addScaledVector(view,-10.9);ideal.y+=2.8;ideal.y=Math.max(groundY(ideal.x,ideal.z)+1.4,ideal.y);camera.position.lerp(ideal,1-Math.exp(-dt*11));camera.lookAt(target.clone().addScaledVector(view,29))}
+ document.getElementById('view').textContent=state.firstPerson?'FIRST PERSON':'THIRD PERSON';
+ document.getElementById('mode').textContent=state.fly?'CREATIVE FLIGHT':'WALKING';
+ document.getElementById('altitude').textContent=Math.max(0,farmer.position.y-floor).toFixed(1).padStart(5,'0')+' M';
+ document.getElementById('distance').textContent=Math.round(Math.hypot(farmer.position.x,farmer.position.z+210))+' M';
+ document.getElementById('coords').textContent=[farmer.position.x,farmer.position.y,farmer.position.z].map(n=>n.toFixed(1)).join(' / ');
+ let near=nearestHotspot(),hint=document.getElementById('interactionHint');hint.classList.toggle('visible',!!near);if(near)hint.textContent='E — '+near.label+' 관찰';
+}
+function frame(){requestAnimationFrame(frame);try{let dt=clock.getDelta();update(dt,clock.elapsedTime);renderer.render(scene,camera)}catch(e){window.__togaError(e.message);throw e}}
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.35))});
+camera.position.set(10,15,168);camera.lookAt(0,82,-220);
+window.__togaReady=true;window.__togaState=state;window.__togaFarmer=farmer;frame();
+</script>
+</body>
+</html>
