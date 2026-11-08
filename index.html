@@ -50,6 +50,7 @@
  @media(max-width:860px){#intro{padding:26px;background:#0c1726d9}.intro-lead{font-size:12px}.guide{grid-template-columns:1fr 1fr;gap:9px}h1{font-size:65px}.hud-brand{left:16px;top:16px}.readout{right:14px;top:16px}.hud-jp{display:none}.coord{bottom:15px;left:16px}.keys{bottom:15px;right:13px}.keys .key{display:none}.locations{top:96px}.loc{font-size:9px;padding:5px}}
  @media(max-width:540px){.guide{grid-template-columns:1fr}.guide div{font-size:10px}.hud-title{font-size:12px}.readout{font-size:8px}.readout b{font-size:9px}.locations{top:82px}.loc{font-size:8px;padding:4px}.keys{display:none}#intro{overflow-y:auto}}
 </style>
+<link rel="stylesheet" href="./mobile-controls.css"/>
 </head>
 <body>
 <canvas id="world" tabindex="0" aria-label="투아왕의 무덤 3D 탐험 장면"></canvas>
@@ -76,7 +77,7 @@
   <div><span class="key">1 / 2 / 3</span>탐험 지점 이동</div><div><span class="key">E</span>가까이서 관찰</div>
  </div>
  <button id="start" class="begin">무덤 탐험 시작하기 ↗</button>
- <div class="legal">ESC로 마우스 고정을 해제할 수 있습니다. 포인터 잠금이 실패해도 이동은 가능합니다.<br/>《이누야샤》에서 영감을 받은 비공식 팬 제작 3D 콘셉트이며, 원작의 공식 3D 모델을 사용하지 않았습니다.</div>
+ <div class="legal">PC: WASD·더블 스페이스 비행 · 모바일: 왼쪽 조이스틱과 오른쪽 비행·점프·시점 버튼. 포인터 잠금이 실패해도 이동할 수 있습니다.<br/>《이누야샤》에서 영감을 받은 비공식 팬 제작 3D 콘셉트이며, 원작의 공식 3D 모델을 사용하지 않았습니다.</div>
 </div></div>
 <div id="error" role="alert"></div>
 <script>
@@ -86,6 +87,7 @@ window.addEventListener('error',e=>{if(!window.__togaReady)window.__togaError(e.
 window.addEventListener('unhandledrejection',e=>window.__togaError(String(e.reason||'라이브러리 로딩 실패')));
 setTimeout(()=>{if(!window.__togaReady)window.__togaError('화면 로딩이 완료되지 않았습니다. Three.js CDN 연결 상태를 확인해 주세요.')},14000);
 </script>
+<script src="./mobile-controls.js"></script>
 <script type="module">
 let THREE;
 try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js')}
@@ -303,9 +305,9 @@ farmer.position.set(0,groundY(0,148),148);
 const intro=document.getElementById('intro'),notice=document.getElementById('fallback'),start=document.getElementById('start');
 let toastTimeout;
 function toast(t){let e=document.getElementById('toast');e.textContent=t;e.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>e.classList.remove('show'),2200)}
-function showNotice(){notice.classList.toggle('visible',state.started&&!state.viewLocked)}
-function pointer(){if(!state.started||document.pointerLockElement===canvas||!canvas.requestPointerLock)return;try{let r=canvas.requestPointerLock();if(r?.catch)r.catch(showNotice)}catch(e){showNotice()}}
-start.addEventListener('click',()=>{state.started=true;intro.classList.add('hidden');canvas.focus({preventScroll:true});showNotice();pointer()});
+function showNotice(){notice.classList.toggle('visible',state.started&&!state.viewLocked&&!window.__mobileController?.enabled)}
+function pointer(){if(window.__mobileController?.enabled||!state.started||document.pointerLockElement===canvas||!canvas.requestPointerLock)return;try{let r=canvas.requestPointerLock();if(r?.catch)r.catch(showNotice)}catch(e){showNotice()}}
+start.addEventListener('click',()=>{state.started=true;intro.classList.add('hidden');canvas.focus({preventScroll:true});showNotice();pointer();window.__mobileController?.start()});
 canvas.addEventListener('mousedown',e=>{if(state.started&&e.button===0&&!state.viewLocked){state.dragging=true;canvas.focus({preventScroll:true})}});
 document.addEventListener('mouseup',()=>state.dragging=false);
 canvas.addEventListener('click',()=>{if(state.started&&!state.viewLocked)pointer()});
@@ -313,6 +315,18 @@ document.addEventListener('pointerlockchange',()=>{state.viewLocked=document.poi
 document.addEventListener('pointerlockerror',showNotice);
 document.addEventListener('mousemove',e=>{if(!state.started||(!state.viewLocked&&!state.dragging))return;state.yaw-=e.movementX*.0022;state.pitch=THREE.MathUtils.clamp(state.pitch-e.movementY*.0019,-1.36,1.37)});
 function fly(v){state.fly=v;state.vertical=0;if(v)farmer.position.y=Math.max(farmer.position.y+2,groundY(farmer.position.x,farmer.position.z)+3);toast(v?'비행 활성화 · SPACE 상승 / SHIFT 하강':'걷기 모드 활성화')}
+
+const mobileController=window.installMarsMobileControls?.({
+  canvas,state,toggleFly:()=>fly(!state.fly),
+  toggleView:()=>{
+    state.firstPerson=!state.firstPerson;
+    avatar.visible=!state.firstPerson;
+    toast(state.firstPerson?'1인칭 시점':'3인칭 시점');
+  },
+  jump:()=>{if(state.grounded){state.vertical=10.2;state.grounded=false}}
+})||{enabled:false,start(){},sync(){}};
+window.__mobileController=mobileController;
+
 const codes=new Set(['KeyW','KeyA','KeyS','KeyD','Space','ShiftLeft','ShiftRight','KeyR','KeyV','KeyF','KeyE','KeyH','Digit1','Digit2','Digit3','ArrowUp','ArrowLeft','ArrowDown','ArrowRight']);
 document.addEventListener('keydown',e=>{
  if(!state.started||e.altKey||e.metaKey||e.ctrlKey||!codes.has(e.code))return;
@@ -340,12 +354,14 @@ function update(delta,time){
  sword.rotation.z=Math.sin(time*.5)*.05;
  const k=state.keys;forward.set(Math.sin(state.yaw),0,-Math.cos(state.yaw));right.set(Math.cos(state.yaw),0,Math.sin(state.yaw));movement.set(0,0,0);
  if(k.KeyW||k.ArrowUp)movement.add(forward);if(k.KeyS||k.ArrowDown)movement.sub(forward);if(k.KeyD||k.ArrowRight)movement.add(right);if(k.KeyA||k.ArrowLeft)movement.sub(right);
- if(movement.lengthSq()>0)movement.normalize();state.moving=movement.lengthSq()>0;
- const boost=k.KeyR||(!state.fly&&(k.ShiftLeft||k.ShiftRight)),speed=(state.fly?29:15)*(boost?2.55:1),alpha=1-Math.exp(-dt*(state.fly?6:10));
+ if(state.mobileAxis){movement.addScaledVector(forward,state.mobileAxis.y);movement.addScaledVector(right,state.mobileAxis.x)}
+ if(movement.lengthSq()>1)movement.normalize();state.moving=movement.lengthSq()>0;
+ const boost=state.mobileSprint||k.KeyR||(!state.fly&&(k.ShiftLeft||k.ShiftRight)),speed=(state.fly?29:15)*(boost?2.55:1),alpha=1-Math.exp(-dt*(state.fly?6:10));
  state.velocity.x=THREE.MathUtils.lerp(state.velocity.x,movement.x*speed,alpha);state.velocity.z=THREE.MathUtils.lerp(state.velocity.z,movement.z*speed,alpha);
  farmer.position.x+=state.velocity.x*dt;farmer.position.z+=state.velocity.z*dt;
  farmer.position.x=THREE.MathUtils.clamp(farmer.position.x,-1000,1000);farmer.position.z=THREE.MathUtils.clamp(farmer.position.z,-1000,1000);
  const floor=groundY(farmer.position.x,farmer.position.z);
+ mobileController.sync();
  if(state.fly){let dy=(k.Space?1:0)-((k.ShiftLeft||k.ShiftRight)?1:0);state.vertical=THREE.MathUtils.lerp(state.vertical,dy*speed,alpha);farmer.position.y+=state.vertical*dt;farmer.position.y=THREE.MathUtils.clamp(farmer.position.y,floor+.2,450);state.grounded=false}
  else{state.vertical-=24*dt;farmer.position.y+=state.vertical*dt;if(farmer.position.y<=floor){farmer.position.y=floor;state.vertical=0;state.grounded=true}}
  avatar.rotation.y=THREE.MathUtils.lerp(avatar.rotation.y,state.yaw+Math.PI,1-Math.exp(-dt*10));avatar.rotation.x=THREE.MathUtils.lerp(avatar.rotation.x,state.fly?-.13:0,dt*5);
